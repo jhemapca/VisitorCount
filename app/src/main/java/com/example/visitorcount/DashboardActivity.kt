@@ -1,7 +1,9 @@
 package com.example.visitorcount
 
 import android.os.Bundle
+import android.os.Environment
 import android.widget.Button
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.anychart.AnyChart
 import com.anychart.AnyChartView
@@ -12,6 +14,8 @@ import com.anychart.enums.Align
 import com.anychart.enums.LegendLayout
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
+import java.io.File
+import java.io.FileWriter
 
 class DashboardActivity : AppCompatActivity() {
     private val STORAGE_PERMISSION_REQUEST_CODE = 1
@@ -25,6 +29,34 @@ class DashboardActivity : AppCompatActivity() {
         val grafico:AnyChartView = findViewById(R.id.any_chart_view)
         val pie:Pie=AnyChart.pie()
         btnDownload.setOnClickListener{
+            db.collection("Entrada").addSnapshotListener{snapshots,e->
+
+                if (e!=null){
+                    return@addSnapshotListener
+                }
+                val csvFile = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "datos.csv")
+                val csvWriter = FileWriter(csvFile)
+                csvWriter.append("anio,mes,dia,hora,minuto,segundo,sexo\n")
+
+                for (dc in snapshots!!.documentChanges){
+                    when(dc.type){
+                        DocumentChange.Type.ADDED,
+                        DocumentChange.Type.MODIFIED,
+                        DocumentChange.Type.REMOVED->{
+                            val rowData = dc.document.data
+                            csvWriter.append("${rowData["anio"]},${rowData["mes"]},${rowData["dia"]},${rowData["hora"]},${rowData["minuto"]},${rowData["segundo"]},${rowData["sexo"]}\n")
+                        }
+                    }
+                }
+                csvWriter.flush()
+                csvWriter.close()
+
+                Toast.makeText(
+                    this,
+                    "Archivo Excel descargado",
+                    Toast.LENGTH_LONG).show()
+            }
+
 //            db.collection("Entrada").get()
 //                .addOnSuccessListener { entradaDocuments ->
 //                    // Obtener los datos de la colección "Salida"
@@ -110,12 +142,13 @@ class DashboardActivity : AppCompatActivity() {
 //                }
         }
         val data:ArrayList<DataEntry> = ArrayList()
-        var h:Int=0
-        var m:Int=0
+
         db.collection("Entrada").addSnapshotListener{snapshots,e->
             if (e!=null){
                 return@addSnapshotListener
             }
+            var h:Int=0
+            var m:Int=0
             for (dc in snapshots!!.documentChanges){
                 when(dc.type){
                     DocumentChange.Type.ADDED,
@@ -129,12 +162,13 @@ class DashboardActivity : AppCompatActivity() {
                     }
                 }
             }
+            data.add(ValueDataEntry("Hombres",h))
+            data.add(ValueDataEntry("Mujeres",m))
+            pie.data(data)
         }
 
 
-        data.add(ValueDataEntry("Hombres",h).apply { setValue("value",h) })
-        data.add(ValueDataEntry("Mujeres",m).apply { setValue("value",m) })
-        pie.data(data)
+
         pie.title("Cantidad de asistentes según género")
         pie.labels().position("outside")
         pie.legend().title().enabled(true)
