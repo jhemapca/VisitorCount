@@ -56,4 +56,6 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:5.0.1'
     implementation 'org.apache.poi:poi:4.1.2'
     implementation 'org.apache.poi:poi-ooxml:4.1.2'
+    implementation 'com.github.AnyChart:AnyChart-Android:1.1.2'
+
 }
